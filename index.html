@@ -59,7 +59,7 @@
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 15px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
 
     .recipient-card {
@@ -80,11 +80,32 @@
       background: #d0e4ff;
     }
 
+    /* כרטיסיית "לכולם" תופסת את כל הרוחב למטה */
+    .recipient-card.everyone {
+      grid-column: span 2;
+      flex-direction: row;
+      justify-content: center;
+      gap: 15px;
+      padding: 12px;
+      background: #e8f8f0;
+    }
+
+    .recipient-card.everyone.selected {
+      border-color: #4caf50;
+      background: #d4edda;
+    }
+
     .avatar-wrapper {
       position: relative;
       width: 80px;
       height: 80px;
       margin-bottom: 10px;
+    }
+
+    .recipient-card.everyone .avatar-wrapper {
+      width: 50px;
+      height: 50px;
+      margin-bottom: 0;
     }
 
     .avatar-img {
@@ -272,6 +293,14 @@
         </div>
         <div class="recipient-name">ליאם</div>
       </div>
+
+      <!-- כפתור לכולם -->
+      <div class="recipient-card everyone" id="card-everyone" onclick="selectRecipient('everyone')">
+        <div class="avatar-wrapper">
+          <div style="font-size: 2.2rem; display: flex; align-items: center; justify-content: center; height: 100%;">👨‍👩‍👧‍👦</div>
+        </div>
+        <div class="recipient-name" style="font-size: 1.3rem;">לכולם יחד! ❤️</div>
+      </div>
     </div>
 
     <input type="file" id="photo-input" accept="image/*" class="hidden" onchange="handlePhotoChange(event)">
@@ -408,6 +437,7 @@
         localStorage.setItem('email_' + p, val);
       });
       document.getElementById('settings-modal').style.display = 'none';
+      alert('ההגדרות נשמרו בהצלחה!');
     }
 
     function loadSettings() {
@@ -419,10 +449,20 @@
 
     function sendMessage() {
       const text = encodeURIComponent(document.getElementById('message-text').value);
-      const email = localStorage.getItem('email_' + selectedPerson) || defaultEmails[selectedPerson];
+      let targetEmail = '';
+
+      if (selectedPerson === 'everyone') {
+        // אוסף את כל המיילים מוגדרים ומחבר אותם בפסיקים לשליחה לכולם יחד
+        const emails = ['mom', 'dad', 'adam', 'liam'].map(p => 
+          localStorage.getItem('email_' + p) || defaultEmails[p]
+        );
+        targetEmail = emails.join(',');
+      } else {
+        targetEmail = localStorage.getItem('email_' + selectedPerson) || defaultEmails[selectedPerson];
+      }
       
-      // פתיחת Gmail לשליחה מדויקת
-      window.location.href = `mailto:${email}?subject=${encodeURIComponent('הודעה חדשה ✉️')}&body=${text}`;
+      // פתיחת Gmail עם הנמען/נמענים המוכנים
+      window.location.href = `mailto:${targetEmail}?subject=${encodeURIComponent('הודעה חדשה ✉️')}&body=${text}`;
     }
 
     init();
