@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>הודעות לילדים ✉️</title>
+  <!-- טעינת ספריית EmailJS לשליחה ישירה ברקע -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
   <style>
     :root {
       --primary: #4a90e2;
@@ -119,7 +121,7 @@
 
     textarea {
       width: 100%;
-      height: 120px;
+      height: 100px;
       border: 2px solid #ddd;
       border-radius: 12px;
       padding: 12px;
@@ -140,13 +142,26 @@
     .tool-btn {
       background: #f0f0f0;
       border: none;
-      padding: 8px 12px;
-      border-radius: 8px;
+      padding: 10px 14px;
+      border-radius: 10px;
       cursor: pointer;
       font-size: 1rem;
       display: flex;
       align-items: center;
       gap: 5px;
+      font-weight: bold;
+    }
+
+    .tool-btn.recording {
+      background: #ff4d4d;
+      color: white;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
     }
 
     .emoji-picker {
@@ -180,6 +195,13 @@
       font-weight: bold;
       cursor: pointer;
       box-shadow: 0 4px 10px rgba(76,175,80,0.3);
+      transition: background 0.2s;
+    }
+
+    .send-btn:disabled {
+      background: #ccc;
+      box-shadow: none;
+      cursor: not-allowed;
     }
 
     .modal {
@@ -197,7 +219,9 @@
       padding: 20px;
       border-radius: 15px;
       width: 90%;
-      max-width: 400px;
+      max-width: 420px;
+      max-height: 85vh;
+      overflow-y: auto;
     }
 
     .input-group {
@@ -221,14 +245,22 @@
     .attachment-preview {
       display: flex;
       align-items: center;
-      gap: 10px;
-      background: #e9e9e9;
-      padding: 5px 10px;
+      justify-content: space-between;
+      background: #eef3f8;
+      padding: 8px 12px;
       border-radius: 8px;
       margin-bottom: 10px;
+      font-size: 0.95rem;
     }
 
     .hidden { display: none !important; }
+
+    .status-msg {
+      margin-top: 10px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
   </style>
 </head>
 <body>
@@ -239,7 +271,7 @@
       <button class="settings-btn" onclick="openSettings()">⚙️</button>
     </div>
 
-    <!-- נמענים -->
+    <!-- כרטיסיות נמענים -->
     <div class="recipients-grid">
       <div class="recipient-card" id="card-mom" onclick="selectRecipient('mom')">
         <div class="avatar-wrapper" onclick="event.stopPropagation(); triggerPhotoUpload('mom');">
@@ -276,29 +308,40 @@
 
     <input type="file" id="photo-input" accept="image/*" class="hidden" onchange="handlePhotoChange(event)">
 
-    <!-- כתיבת הודעה -->
+    <!-- טקסט הודעה -->
     <textarea id="message-text" placeholder="מה תרצה לכתוב?"></textarea>
 
-    <div id="attachment-area" class="attachment-preview hidden">
-      <span>📎 תמונה צורפה</span>
-      <button onclick="removeAttachment()">❌</button>
+    <!-- פאנל תצוגת הקלטה ותמונות -->
+    <div id="image-preview-area" class="attachment-preview hidden">
+      <span>🖼️ תמונה צורפה</span>
+      <button onclick="removeImage()">❌</button>
     </div>
 
+    <div id="audio-preview-area" class="attachment-preview hidden">
+      <span>🎙️ הודעה קולית הוקלטה</span>
+      <audio id="audio-player" controls style="height: 30px;"></audio>
+      <button onclick="removeAudio()">❌</button>
+    </div>
+
+    <!-- כפתורי עזר -->
     <div class="tools-bar">
       <button class="tool-btn" onclick="toggleEmojiPicker()">😀 סמיילים</button>
-      <button class="tool-btn" onclick="document.getElementById('attach-file').click()">🖼️ הוסף תמונה</button>
+      <button class="tool-btn" onclick="document.getElementById('attach-file').click()">🖼️ תמונה</button>
+      <button id="record-btn" class="tool-btn" onclick="toggleRecord()">🎙️ הקלט קול</button>
       <input type="file" id="attach-file" accept="image/*" class="hidden" onchange="handleAttachment(event)">
     </div>
 
     <div id="emoji-picker" class="emoji-picker hidden"></div>
 
-    <button class="send-btn" onclick="sendMessage()">שגור הודעה 🚀</button>
+    <button id="send-btn" class="send-btn" onclick="sendMessage()">שגור הודעה 🚀</button>
+    <div id="status-msg" class="status-msg"></div>
   </div>
 
   <!-- מודל הגדרות -->
   <div id="settings-modal" class="modal">
     <div class="modal-content">
-      <h2>הגדרות כתובות מייל ⚙️</h2>
+      <h2>הגדרות ⚙️</h2>
+      
       <div class="input-group">
         <label>מייל של אמא:</label>
         <input type="email" id="email-mom">
@@ -315,13 +358,37 @@
         <label>מייל של ליאם:</label>
         <input type="email" id="email-liam">
       </div>
-      <button class="send-btn" onclick="saveSettings()" style="margin-top: 15px;">שמור</button>
+
+      <hr style="margin: 15px 0;">
+      <h3>חיבור לשליחה ישירה ברקע (EmailJS):</h3>
+      <p style="font-size: 0.85rem; color: #666;">
+        כדי לאפשר שליחה ברקע ללא פתיחת Gmail, הירשם בחינם ל-EmailJS.com והזן כאן את המפתחות:
+      </p>
+      <div class="input-group">
+        <label>Public Key:</label>
+        <input type="text" id="ej-public-key" placeholder="לדוגמה: user_xxxx">
+      </div>
+      <div class="input-group">
+        <label>Service ID:</label>
+        <input type="text" id="ej-service-id" placeholder="לדוגמה: service_xxxx">
+      </div>
+      <div class="input-group">
+        <label>Template ID:</label>
+        <input type="text" id="ej-template-id" placeholder="לדוגמה: template_xxxx">
+      </div>
+
+      <button class="send-btn" onclick="saveSettings()" style="margin-top: 15px;">שמור הגדרות</button>
     </div>
   </div>
 
   <script>
     let selectedPerson = 'mom';
     let targetPhotoPerson = '';
+    let mediaRecorder;
+    let audioChunks = [];
+    let audioBase64 = null;
+    let imageBase64 = null;
+    let isRecording = false;
 
     const defaultEmails = {
       mom: 'mom@example.com',
@@ -362,6 +429,49 @@
       });
     }
 
+    // הקלטת קול
+    async function toggleRecord() {
+      const btn = document.getElementById('record-btn');
+      if (!isRecording) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = [];
+
+          mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+          mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            document.getElementById('audio-player').src = audioUrl;
+            document.getElementById('audio-preview-area').classList.remove('hidden');
+
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = () => {
+              audioBase64 = reader.result;
+            };
+          };
+
+          mediaRecorder.start();
+          isRecording = true;
+          btn.classList.add('recording');
+          btn.innerText = '⏹️ עצור הקלטה';
+        } catch (err) {
+          alert('אין גישה למיקרופון במכשיר');
+        }
+      } else {
+        mediaRecorder.stop();
+        isRecording = false;
+        btn.classList.remove('recording');
+        btn.innerText = '🎙️ הקלט קול';
+      }
+    }
+
+    function removeAudio() {
+      audioBase64 = null;
+      document.getElementById('audio-preview-area').classList.add('hidden');
+    }
+
     function triggerPhotoUpload(person) {
       targetPhotoPerson = person;
       document.getElementById('photo-input').click();
@@ -388,14 +498,21 @@
     }
 
     function handleAttachment(event) {
-      if (event.target.files.length > 0) {
-        document.getElementById('attachment-area').classList.remove('hidden');
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          imageBase64 = e.target.result;
+          document.getElementById('image-preview-area').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
       }
     }
 
-    function removeAttachment() {
+    function removeImage() {
+      imageBase64 = null;
       document.getElementById('attach-file').value = '';
-      document.getElementById('attachment-area').classList.add('hidden');
+      document.getElementById('image-preview-area').classList.add('hidden');
     }
 
     function openSettings() {
@@ -407,7 +524,13 @@
         const val = document.getElementById('email-' + p).value;
         localStorage.setItem('email_' + p, val);
       });
+
+      localStorage.setItem('ej_public_key', document.getElementById('ej-public-key').value);
+      localStorage.setItem('ej_service_id', document.getElementById('ej-service-id').value);
+      localStorage.setItem('ej_template_id', document.getElementById('ej-template-id').value);
+
       document.getElementById('settings-modal').style.display = 'none';
+      alert('ההגדרות נשמרו בהצלחה!');
     }
 
     function loadSettings() {
@@ -415,14 +538,61 @@
         const saved = localStorage.getItem('email_' + p) || defaultEmails[p];
         document.getElementById('email-' + p).value = saved;
       });
+
+      document.getElementById('ej-public-key').value = localStorage.getItem('ej_public_key') || '';
+      document.getElementById('ej-service-id').value = localStorage.getItem('ej_service_id') || '';
+      document.getElementById('ej-template-id').value = localStorage.getItem('ej_template_id') || '';
     }
 
-    function sendMessage() {
-      const text = encodeURIComponent(document.getElementById('message-text').value);
-      const email = localStorage.getItem('email_' + selectedPerson) || defaultEmails[selectedPerson];
+    async function sendMessage() {
+      const text = document.getElementById('message-text').value;
+      const targetEmail = localStorage.getItem('email_' + selectedPerson) || defaultEmails[selectedPerson];
       
-      // פתיחת Gmail לשליחה מדויקת
-      window.location.href = `mailto:${email}?subject=${encodeURIComponent('הודעה חדשה ✉️')}&body=${text}`;
+      const publicKey = localStorage.getItem('ej_public_key');
+      const serviceID = localStorage.getItem('ej_service_id');
+      const templateID = localStorage.getItem('ej_template_id');
+
+      const sendBtn = document.getElementById('send-btn');
+      const statusMsg = document.getElementById('status-msg');
+
+      // במידה ולא הגדרת מפתחות EmailJS - ישתמש כגיבוי בשליחה פשוטה
+      if (!publicKey || !serviceID || !templateID) {
+        alert('כדי לשלוח ברקע ללא פתיחת Gmail, יש להזין את מפתחות EmailJS בהגדרות ⚙️');
+        window.location.href = `mailto:${targetEmail}?subject=${encodeURIComponent('הודעה חדשה ✉️')}&body=${encodeURIComponent(text)}`;
+        return;
+      }
+
+      sendBtn.disabled = true;
+      statusMsg.style.color = '#333';
+      statusMsg.innerText = 'שולח הודעה... ⏳';
+
+      try {
+        emailjs.init(publicKey);
+
+        const templateParams = {
+          to_email: targetEmail,
+          message: text,
+          audio_attachment: audioBase64 || '',
+          image_attachment: imageBase64 || ''
+        };
+
+        await emailjs.send(serviceID, templateID, templateParams);
+
+        statusMsg.style.color = 'green';
+        statusMsg.innerText = 'ההודעה נשלחה בהצלחה! 🎉';
+        
+        // איפוס טופס
+        document.getElementById('message-text').value = '';
+        removeAudio();
+        removeImage();
+
+      } catch (err) {
+        statusMsg.style.color = 'red';
+        statusMsg.innerText = 'שגיאה בשליחה. בדוק את ההגדרות.';
+      } finally {
+        sendBtn.disabled = false;
+        setTimeout(() => { statusMsg.innerText = ''; }, 4000);
+      }
     }
 
     init();
