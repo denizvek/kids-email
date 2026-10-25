@@ -23,6 +23,8 @@
       align-items: center;
       min-height: 100vh;
       box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     .container {
@@ -80,7 +82,6 @@
       background: #d0e4ff;
     }
 
-    /* כרטיסיית "לכולם" תופסת את כל הרוחב למטה */
     .recipient-card.everyone {
       grid-column: span 2;
       flex-direction: row;
@@ -103,8 +104,8 @@
     }
 
     .recipient-card.everyone .avatar-wrapper {
-      width: 50px;
-      height: 50px;
+      width: 60px;
+      height: 60px;
       margin-bottom: 0;
     }
 
@@ -262,42 +263,43 @@
 
     <!-- נמענים -->
     <div class="recipients-grid">
-      <div class="recipient-card" id="card-mom" onclick="selectRecipient('mom')">
-        <div class="avatar-wrapper" onclick="event.stopPropagation(); triggerPhotoUpload('mom');">
+      <div class="recipient-card" id="card-mom" data-person="mom">
+        <div class="avatar-wrapper">
           <img id="img-mom" class="avatar-img" src="https://via.placeholder.com/80?text=אמא" alt="אמא">
           <div class="change-photo-badge">📷</div>
         </div>
         <div class="recipient-name">אמא</div>
       </div>
 
-      <div class="recipient-card" id="card-dad" onclick="selectRecipient('dad')">
-        <div class="avatar-wrapper" onclick="event.stopPropagation(); triggerPhotoUpload('dad');">
+      <div class="recipient-card" id="card-dad" data-person="dad">
+        <div class="avatar-wrapper">
           <img id="img-dad" class="avatar-img" src="https://via.placeholder.com/80?text=אבא" alt="אבא">
           <div class="change-photo-badge">📷</div>
         </div>
         <div class="recipient-name">אבא</div>
       </div>
 
-      <div class="recipient-card" id="card-adam" onclick="selectRecipient('adam')">
-        <div class="avatar-wrapper" onclick="event.stopPropagation(); triggerPhotoUpload('adam');">
+      <div class="recipient-card" id="card-adam" data-person="adam">
+        <div class="avatar-wrapper">
           <img id="img-adam" class="avatar-img" src="https://via.placeholder.com/80?text=אדם" alt="אדם">
           <div class="change-photo-badge">📷</div>
         </div>
         <div class="recipient-name">אדם</div>
       </div>
 
-      <div class="recipient-card" id="card-liam" onclick="selectRecipient('liam')">
-        <div class="avatar-wrapper" onclick="event.stopPropagation(); triggerPhotoUpload('liam');">
+      <div class="recipient-card" id="card-liam" data-person="liam">
+        <div class="avatar-wrapper">
           <img id="img-liam" class="avatar-img" src="https://via.placeholder.com/80?text=ליאם" alt="ליאם">
           <div class="change-photo-badge">📷</div>
         </div>
         <div class="recipient-name">ליאם</div>
       </div>
 
-      <!-- כפתור לכולם -->
-      <div class="recipient-card everyone" id="card-everyone" onclick="selectRecipient('everyone')">
+      <!-- כפתור לכולם כולל תמונה -->
+      <div class="recipient-card everyone" id="card-everyone" data-person="everyone">
         <div class="avatar-wrapper">
-          <div style="font-size: 2.2rem; display: flex; align-items: center; justify-content: center; height: 100%;">👨‍👩‍👧‍👦</div>
+          <img id="img-everyone" class="avatar-img" src="https://via.placeholder.com/80?text=משפחה" alt="לכולם">
+          <div class="change-photo-badge">📷</div>
         </div>
         <div class="recipient-name" style="font-size: 1.3rem;">לכולם יחד! ❤️</div>
       </div>
@@ -351,6 +353,7 @@
   <script>
     let selectedPerson = 'mom';
     let targetPhotoPerson = '';
+    let pressTimer = null;
 
     const defaultEmails = {
       mom: 'mom@example.com',
@@ -366,12 +369,43 @@
       loadSettings();
       loadPhotos();
       buildEmojiPicker();
+      setupLongPressListeners();
     }
 
     function selectRecipient(person) {
       selectedPerson = person;
       document.querySelectorAll('.recipient-card').forEach(card => card.classList.remove('selected'));
       document.getElementById('card-' + person).classList.add('selected');
+    }
+
+    function setupLongPressListeners() {
+      const cards = document.querySelectorAll('.recipient-card');
+      
+      cards.forEach(card => {
+        const person = card.getAttribute('data-person');
+
+        const startPress = (e) => {
+          pressTimer = setTimeout(() => {
+            pressTimer = null;
+            triggerPhotoUpload(person); // לחיצה ארוכה - פותח הגדרת תמונה
+          }, 600);
+        };
+
+        const cancelPress = (e) => {
+          if (pressTimer) {
+            clearTimeout(pressTimer);
+            pressTimer = null;
+            selectRecipient(person); // לחיצה קצרה - בוחר את הישות
+          }
+        };
+
+        card.addEventListener('mousedown', startPress);
+        card.addEventListener('mouseup', cancelPress);
+        card.addEventListener('mouseleave', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+
+        card.addEventListener('touchstart', startPress);
+        card.addEventListener('touchend', cancelPress);
+      });
     }
 
     function toggleEmojiPicker() {
@@ -410,7 +444,7 @@
     }
 
     function loadPhotos() {
-      ['mom', 'dad', 'adam', 'liam'].forEach(p => {
+      ['mom', 'dad', 'adam', 'liam', 'everyone'].forEach(p => {
         const saved = localStorage.getItem('photo_' + p);
         if (saved) document.getElementById('img-' + p).src = saved;
       });
@@ -452,7 +486,6 @@
       let targetEmail = '';
 
       if (selectedPerson === 'everyone') {
-        // אוסף את כל המיילים מוגדרים ומחבר אותם בפסיקים לשליחה לכולם יחד
         const emails = ['mom', 'dad', 'adam', 'liam'].map(p => 
           localStorage.getItem('email_' + p) || defaultEmails[p]
         );
@@ -461,7 +494,6 @@
         targetEmail = localStorage.getItem('email_' + selectedPerson) || defaultEmails[selectedPerson];
       }
       
-      // פתיחת Gmail עם הנמען/נמענים המוכנים
       window.location.href = `mailto:${targetEmail}?subject=${encodeURIComponent('הודעה חדשה ✉️')}&body=${text}`;
     }
 
