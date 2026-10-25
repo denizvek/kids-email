@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>הודעות לילדים ✉️</title>
+  <style>
+    :root {
+      --primary: #4a90e2;
+      --bg: #f4f7f6;
+      --card-bg: #ffffff;
+      --text: #333333;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      color: var(--primary);
+    }
+
+    .settings-btn {
+      background: none;
+      border: none;
+      font-size: 1.8rem;
+      cursor: pointer;
+    }
+
+    .recipients-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .recipient-card {
+      background: #eef5fc;
+      border: 3px solid transparent;
+      border-radius: 15px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .recipient-card.selected {
+      border-color: var(--primary);
+      background: #d0e4ff;
+    }
+
+    .avatar-wrapper {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      margin-bottom: 10px;
+    }
+
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .change-photo-badge {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      border: 2px solid white;
+    }
+
+    .recipient-name {
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      border: 2px solid #ddd;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 1.1rem;
+      box-sizing: border-box;
+      resize: none;
+      margin-bottom: 10px;
+      font-family: inherit;
+    }
+
+    .tools-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .tool-btn {
+      background: #f0f0f0;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .emoji-picker {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 5px;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+      margin-bottom: 15px;
+    }
+
+    .emoji-btn {
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+
+    .send-btn {
+      width: 100%;
+      background: #4caf50;
+      color: white;
+      border: none;
+      padding: 15px;
+      border-radius: 12px;
+      font-size: 1.3rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(76,175,80,0.3);
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .input-group {
+      margin-bottom: 10px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 3px;
+      font-weight: bold;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    .attachment-preview {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #e9e9e9;
+      padding: 5px 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <h1>שלח הודעה ✉️</h1>
+      <button class="settings-btn" onclick="openSettings()">⚙️</button>
+    </div>
+
+    <!-- נמענים -->
+    <div class="recipients-grid">
+      <div class="recipient-card" id="card-mom" onclick="selectRecipient('mom')">
+        <div class="avatar-wrapper" onclick="event.stopPropagation(); triggerPhotoUpload('mom');">
+          <img id="img-mom" class="avatar-img" src="https://via.placeholder.com/80?text=אמא" alt="אמא">
+          <div class="change-photo-badge">📷</div>
+        </div>
+        <div class="recipient-name">אמא</div>
+      </div>
+
+      <div class="recipient-card" id="card-dad" onclick="selectRecipient('dad')">
+        <div class="avatar-wrapper" onclick="event.stopPropagation(); triggerPhotoUpload('dad');">
+          <img id="img-dad" class="avatar-img" src="https://via.placeholder.com/80?text=אבא" alt="אבא">
+          <div class="change-photo-badge">📷</div>
+        </div>
+        <div class="recipient-name">אבא</div>
+      </div>
+
+      <div class="recipient-card" id="card-adam" onclick="selectRecipient('adam')">
+        <div class="avatar-wrapper" onclick="event.stopPropagation(); triggerPhotoUpload('adam');">
+          <img id="img-adam" class="avatar-img" src="https://via.placeholder.com/80?text=אדם" alt="אדם">
+          <div class="change-photo-badge">📷</div>
+        </div>
+        <div class="recipient-name">אדם</div>
+      </div>
+
+      <div class="recipient-card" id="card-liam" onclick="selectRecipient('liam')">
+        <div class="avatar-wrapper" onclick="event.stopPropagation(); triggerPhotoUpload('liam');">
+          <img id="img-liam" class="avatar-img" src="https://via.placeholder.com/80?text=ליאם" alt="ליאם">
+          <div class="change-photo-badge">📷</div>
+        </div>
+        <div class="recipient-name">ליאם</div>
+      </div>
+    </div>
+
+    <input type="file" id="photo-input" accept="image/*" class="hidden" onchange="handlePhotoChange(event)">
+
+    <!-- כתיבת הודעה -->
+    <textarea id="message-text" placeholder="מה תרצה לכתוב?"></textarea>
+
+    <div id="attachment-area" class="attachment-preview hidden">
+      <span>📎 תמונה צורפה</span>
+      <button onclick="removeAttachment()">❌</button>
+    </div>
+
+    <div class="tools-bar">
+      <button class="tool-btn" onclick="toggleEmojiPicker()">😀 סמיילים</button>
+      <button class="tool-btn" onclick="document.getElementById('attach-file').click()">🖼️ הוסף תמונה</button>
+      <input type="file" id="attach-file" accept="image/*" class="hidden" onchange="handleAttachment(event)">
+    </div>
+
+    <div id="emoji-picker" class="emoji-picker hidden"></div>
+
+    <button class="send-btn" onclick="sendMessage()">שגור הודעה 🚀</button>
+  </div>
+
+  <!-- מודל הגדרות -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <h2>הגדרות כתובות מייל ⚙️</h2>
+      <div class="input-group">
+        <label>מייל של אמא:</label>
+        <input type="email" id="email-mom">
+      </div>
+      <div class="input-group">
+        <label>מייל של אבא:</label>
+        <input type="email" id="email-dad">
+      </div>
+      <div class="input-group">
+        <label>מייל של אדם:</label>
+        <input type="email" id="email-adam">
+      </div>
+      <div class="input-group">
+        <label>מייל של ליאם:</label>
+        <input type="email" id="email-liam">
+      </div>
+      <button class="send-btn" onclick="saveSettings()" style="margin-top: 15px;">שמור</button>
+    </div>
+  </div>
+
+  <script>
+    let selectedPerson = 'mom';
+    let targetPhotoPerson = '';
+
+    const defaultEmails = {
+      mom: 'mom@example.com',
+      dad: 'dad@example.com',
+      adam: 'adam@example.com',
+      liam: 'liam@example.com'
+    };
+
+    const emojis = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😍','🥰','😘','😗','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐','😕','😟','🙁','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾','🙈','🙉','🙊','💋','💌','💘','💝','💖','💗','💓','💞','💕','💟','❣','💔','❤️','🧡','💛','💚','💙','💜','🤎','🖤','🤍','💯','💢','💥','💫','💦','💨','🕳️','💣','💬','🗨️','🗯️','💭','💤','👋','🤚','🖐️','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪'];
+
+    function init() {
+      selectRecipient('mom');
+      loadSettings();
+      loadPhotos();
+      buildEmojiPicker();
+    }
+
+    function selectRecipient(person) {
+      selectedPerson = person;
+      document.querySelectorAll('.recipient-card').forEach(card => card.classList.remove('selected'));
+      document.getElementById('card-' + person).classList.add('selected');
+    }
+
+    function toggleEmojiPicker() {
+      document.getElementById('emoji-picker').classList.toggle('hidden');
+    }
+
+    function buildEmojiPicker() {
+      const picker = document.getElementById('emoji-picker');
+      emojis.forEach(e => {
+        const btn = document.createElement('button');
+        btn.className = 'emoji-btn';
+        btn.innerText = e;
+        btn.onclick = () => {
+          document.getElementById('message-text').value += e;
+        };
+        picker.appendChild(btn);
+      });
+    }
+
+    function triggerPhotoUpload(person) {
+      targetPhotoPerson = person;
+      document.getElementById('photo-input').click();
+    }
+
+    function handlePhotoChange(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const dataUrl = e.target.result;
+          document.getElementById('img-' + targetPhotoPerson).src = dataUrl;
+          localStorage.setItem('photo_' + targetPhotoPerson, dataUrl);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function loadPhotos() {
+      ['mom', 'dad', 'adam', 'liam'].forEach(p => {
+        const saved = localStorage.getItem('photo_' + p);
+        if (saved) document.getElementById('img-' + p).src = saved;
+      });
+    }
+
+    function handleAttachment(event) {
+      if (event.target.files.length > 0) {
+        document.getElementById('attachment-area').classList.remove('hidden');
+      }
+    }
+
+    function removeAttachment() {
+      document.getElementById('attach-file').value = '';
+      document.getElementById('attachment-area').classList.add('hidden');
+    }
+
+    function openSettings() {
+      document.getElementById('settings-modal').style.display = 'flex';
+    }
+
+    function saveSettings() {
+      ['mom', 'dad', 'adam', 'liam'].forEach(p => {
+        const val = document.getElementById('email-' + p).value;
+        localStorage.setItem('email_' + p, val);
+      });
+      document.getElementById('settings-modal').style.display = 'none';
+    }
+
+    function loadSettings() {
+      ['mom', 'dad', 'adam', 'liam'].forEach(p => {
+        const saved = localStorage.getItem('email_' + p) || defaultEmails[p];
+        document.getElementById('email-' + p).value = saved;
+      });
+    }
+
+    function sendMessage() {
+      const text = encodeURIComponent(document.getElementById('message-text').value);
+      const email = localStorage.getItem('email_' + selectedPerson) || defaultEmails[selectedPerson];
+      
+      // פתיחת Gmail לשליחה מדויקת
+      window.location.href = `mailto:${email}?subject=${encodeURIComponent('הודעה חדשה ✉️')}&body=${text}`;
+    }
+
+    init();
+  </script>
+</body>
+</html>
